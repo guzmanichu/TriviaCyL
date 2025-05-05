@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">TriviaCyL</string>
+    <string name="iniciar_partida">Iniciar Partida</string>
+    <string name="trivial_castilla_y_le_n">Trivial Castilla y León</string>
+</resources>
