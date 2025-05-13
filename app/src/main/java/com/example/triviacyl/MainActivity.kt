@@ -1,29 +1,27 @@
 package com.example.triviacyl
 
 import Club
+import PreguntaGenerator
 import PreguntaTrivial
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
-
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-
-            // Llamada a la pantalla principal del juego
             GameScreen()
-
         }
     }
 }
@@ -32,14 +30,39 @@ class MainActivity : ComponentActivity() {
 fun GameScreen() {
     val context = LocalContext.current
     var selectedRounds by remember { mutableStateOf("5") }
+    var tipoPreguntaDeportes by remember { mutableIntStateOf(1) }
     var isDropdownOpen by remember { mutableStateOf(false) }
     var partidaIniciada by remember { mutableStateOf(false) }
     val clubs = remember { mutableStateListOf<Club>() }
     var preguntaActual by remember { mutableStateOf<PreguntaTrivial?>(null) }
 
+    var puntos by remember { mutableIntStateOf(0) }
+    var respuestasCorrectas by remember { mutableIntStateOf(0) }
+    var rondaActual by remember { mutableIntStateOf(1) }
+    var racha by remember { mutableIntStateOf(0) }
+    var mostrarResumen by remember { mutableStateOf(false) }
+    val categorias = listOf("Deportes")
+    var categoriaSeleccionada by remember { mutableStateOf<String?>(null) }
+    var mostrarPregunta by remember { mutableStateOf(false) }
+    var categoriaAnimada by remember { mutableStateOf<String?>(null) }
+    var ruletaEnProgreso by remember { mutableStateOf(true) }
+
+    // Cargar los datos del CSV al inicio
     LaunchedEffect(Unit) {
         val cargados = ClubDataLoader.loadClubsFromCSV(context)
         clubs.addAll(cargados)
+    }
+
+    LaunchedEffect(!mostrarPregunta) {
+        if (!mostrarPregunta) {
+            ruletaEnProgreso = true
+            repeat(10) {
+                categoriaAnimada = categorias.random()
+                delay(100)
+            }
+            categoriaSeleccionada = categoriaAnimada
+            ruletaEnProgreso = false
+        }
     }
 
     Column(
@@ -49,11 +72,11 @@ fun GameScreen() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top
     ) {
-        Text("Trivial Castilla y León", style = MaterialTheme.typography.headlineLarge)
-
+        Text("TriviaCyL", style = MaterialTheme.typography.headlineLarge)
         Spacer(modifier = Modifier.height(24.dp))
 
         if (!partidaIniciada) {
+            // Selección de número de rondas
             Box {
                 Text(
                     text = "Rondas: $selectedRounds",
@@ -61,7 +84,6 @@ fun GameScreen() {
                         .clickable { isDropdownOpen = !isDropdownOpen }
                         .padding(8.dp)
                 )
-
                 DropdownMenu(
                     expanded = isDropdownOpen,
                     onDismissRequest = { isDropdownOpen = false }
@@ -81,36 +103,116 @@ fun GameScreen() {
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(onClick = {
+                puntos = 0
+                rondaActual = 1
                 preguntaActual = PreguntaGenerator.generarPreguntaProvincia(clubs)
                 partidaIniciada = true
             }) {
                 Text("Iniciar Partida")
             }
-
         } else {
-            // Mostrar pregunta
-            preguntaActual?.let { pregunta ->
-                Text(pregunta.texto, style = MaterialTheme.typography.titleMedium)
-                Spacer(modifier = Modifier.height(16.dp))
+            // Mostrar progreso
+            Text("Ronda $rondaActual de $selectedRounds", style = MaterialTheme.typography.bodyLarge)
+            Text("Puntos: $puntos", style = MaterialTheme.typography.bodyLarge)
+            Text("Racha actual: $racha", style = MaterialTheme.typography.bodyLarge)
 
-                pregunta.opciones.forEach { opcion ->
-                    Button(
-                        onClick = {
-                            if (opcion == pregunta.respuestaCorrecta) {
-                                Toast.makeText(context, "¡Correcto!", Toast.LENGTH_SHORT).show()
-                            } else {
-                                Toast.makeText(context, "Incorrecto", Toast.LENGTH_SHORT).show()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (!mostrarPregunta) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("🎯 Ruleta de categoría", style = MaterialTheme.typography.titleMedium)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = categoriaAnimada ?: "...",
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    if (!ruletaEnProgreso) {
+                        Button(onClick = {
+                            if (categoriaSeleccionada == "Deportes") {
+                                if (tipoPreguntaDeportes == 1) {
+                                    preguntaActual = PreguntaGenerator.generarPreguntaProvincia(clubs)
+                                    tipoPreguntaDeportes = 2
+                                } else {
+                                    preguntaActual = PreguntaGenerator.generarPreguntaDeporte(clubs)
+                                    tipoPreguntaDeportes = 1
+                                }
+
+
                             }
-                            // Generar siguiente pregunta (aquí podrías contar rondas)
-                            preguntaActual = PreguntaGenerator.generarPreguntaProvincia(clubs)
-                        },
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                    ) {
-                        Text(opcion)
+                            mostrarPregunta = true
+                        }) {
+                            Text("Continuar")
+                        }
+                    }
+                }
+        } else {
+                // Mostrar pregunta
+                preguntaActual?.let { pregunta ->
+                    Text(pregunta.texto, style = MaterialTheme.typography.titleMedium)
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    pregunta.opciones.forEach { opcion ->
+                        Button(
+                            onClick = {
+                                if (opcion == pregunta.respuestaCorrecta) {
+                                    puntos++
+                                    racha++
+                                    respuestasCorrectas++
+                                    if (racha == 5) {
+                                        puntos += 5
+                                        Toast.makeText(context, "¡Racha de 5! +5 puntos extra", Toast.LENGTH_SHORT).show()
+                                        racha = 0
+                                    } else {
+                                        Toast.makeText(context, "¡Correcto!", Toast.LENGTH_SHORT).show()
+                                    }
+                                } else {
+                                    Toast.makeText(context, "Incorrecto", Toast.LENGTH_SHORT).show()
+                                    racha = 0
+                                }
+
+                                rondaActual++
+                                if (rondaActual > selectedRounds.toInt()) {
+                                    mostrarResumen = true
+                                    partidaIniciada = false
+                                } else {
+                                    mostrarPregunta = false
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                        ) {
+                            Text(opcion)
+                        }
                     }
                 }
             }
+
         }
+        if (mostrarResumen) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("🎉 ¡Partida terminada!", style = MaterialTheme.typography.headlineSmall)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Puntos totales: $puntos")
+                Text("Respuestas correctas: $respuestasCorrectas de $selectedRounds")
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(onClick = {
+                    // Resetear el juego
+                    puntos = 0
+                    respuestasCorrectas = 0
+                    racha = 0
+                    rondaActual = 1
+                    partidaIniciada = false
+                    mostrarResumen = false
+                    preguntaActual = null
+                }) {
+                    Text("Volver al inicio")
+                }
+            }
+        }
+
     }
 }
-
