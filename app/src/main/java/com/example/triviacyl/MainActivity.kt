@@ -21,7 +21,98 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            GameScreen()
+            var currentScreen by remember { mutableStateOf("login") }
+
+            when (currentScreen) {
+                "login" -> LoginScreen(onLoginSuccess = {
+                    currentScreen = "game"
+                }, onRegisterClick = {
+                    currentScreen = "register"
+                })
+
+                "register" -> RegisterScreen(onBackToLogin = {
+                    currentScreen = "login"
+                })
+
+                "game" -> GameScreen()
+            }
+        }
+    }
+}
+
+@Composable
+fun LoginScreen(onLoginSuccess: () -> Unit, onRegisterClick: () -> Unit) {
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    val context = LocalContext.current
+
+    Column(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("Iniciar Sesión", style = MaterialTheme.typography.headlineMedium)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(value = username, onValueChange = { username = it }, label = { Text("Usuario") })
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Contraseña") })
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(onClick = {
+            if (username == "admin" && password == "admin") {
+                onLoginSuccess()
+            } else {
+                Toast.makeText(context, "Usuario o contraseña incorrectos", Toast.LENGTH_SHORT).show()
+            }
+        }) {
+            Text("Acceder")
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            "¿No tienes cuenta? Regístrate",
+            modifier = Modifier.clickable { onRegisterClick() },
+            style = MaterialTheme.typography.bodyMedium
+        )
+    }
+}
+
+@Composable
+fun RegisterScreen(onBackToLogin: () -> Unit) {
+    var username by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("Registro", style = MaterialTheme.typography.headlineMedium)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(value = username, onValueChange = { username = it }, label = { Text("Usuario") })
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Correo") })
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Contraseña") })
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(value = confirmPassword, onValueChange = { confirmPassword = it }, label = { Text("Confirmar Contraseña") })
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(onClick = { /* Simulación, no hace nada */ }) {
+            Text("Registrar")
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Button(onClick = onBackToLogin) {
+            Text("Volver al Login")
         }
     }
 }
