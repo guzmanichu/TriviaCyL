@@ -24,17 +24,16 @@ class MainActivity : ComponentActivity() {
             var currentScreen by remember { mutableStateOf("login") }
 
             when (currentScreen) {
-                "login" -> LoginScreen(onLoginSuccess = {
-                    currentScreen = "game"
-                }, onRegisterClick = {
-                    currentScreen = "register"
-                })
-
-                "register" -> RegisterScreen(onBackToLogin = {
-                    currentScreen = "login"
-                })
-
-                "game" -> GameScreen()
+                "login" -> LoginScreen(
+                    onLoginSuccess = { currentScreen = "game" },
+                    onRegisterClick = { currentScreen = "register" }
+                )
+                "register" -> RegisterScreen(onBackToLogin = { currentScreen = "login" })
+                "game" -> GameScreen(
+                    onCerrarSesion = { currentScreen = "login" },
+                    onVerEstadisticas = { currentScreen = "estadisticas" }
+                )
+                "estadisticas" -> EstadisticasScreen(volverAlMenu = { currentScreen = "game" })
             }
         }
     }
@@ -118,7 +117,10 @@ fun RegisterScreen(onBackToLogin: () -> Unit) {
 }
 
 @Composable
-fun GameScreen() {
+fun GameScreen(
+    onCerrarSesion: () -> Unit,
+    onVerEstadisticas: () -> Unit
+) {
     val context = LocalContext.current
     var selectedRounds by remember { mutableStateOf("5") }
     var tipoPreguntaDeportes by remember { mutableIntStateOf(1) }
@@ -138,7 +140,6 @@ fun GameScreen() {
     var categoriaAnimada by remember { mutableStateOf<String?>(null) }
     var ruletaEnProgreso by remember { mutableStateOf(true) }
 
-    // Cargar los datos del CSV al inicio
     LaunchedEffect(Unit) {
         val cargados = ClubDataLoader.loadClubsFromCSV(context)
         clubs.addAll(cargados)
@@ -167,7 +168,6 @@ fun GameScreen() {
         Spacer(modifier = Modifier.height(24.dp))
 
         if (!partidaIniciada) {
-            // Selección de número de rondas
             Box {
                 Text(
                     text = "Rondas: $selectedRounds",
@@ -201,8 +201,19 @@ fun GameScreen() {
             }) {
                 Text("Iniciar Partida")
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(onClick = onVerEstadisticas) {
+                Text("Estadísticas")
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(onClick = onCerrarSesion) {
+                Text("Cerrar Sesión")
+            }
         } else {
-            // Mostrar progreso
             Text("Ronda $rondaActual de $selectedRounds", style = MaterialTheme.typography.bodyLarge)
             Text("Puntos: $puntos", style = MaterialTheme.typography.bodyLarge)
             Text("Racha actual: $racha", style = MaterialTheme.typography.bodyLarge)
@@ -213,7 +224,6 @@ fun GameScreen() {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("🎯 Ruleta de categoría", style = MaterialTheme.typography.titleMedium)
                     Spacer(modifier = Modifier.height(12.dp))
-                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = categoriaAnimada ?: "...",
                         style = MaterialTheme.typography.headlineSmall
@@ -223,15 +233,13 @@ fun GameScreen() {
                     if (!ruletaEnProgreso) {
                         Button(onClick = {
                             if (categoriaSeleccionada == "Deportes") {
-                                if (tipoPreguntaDeportes == 1) {
-                                    preguntaActual = PreguntaGenerator.generarPreguntaProvincia(clubs)
+                                preguntaActual = if (tipoPreguntaDeportes == 1) {
                                     tipoPreguntaDeportes = 2
+                                    PreguntaGenerator.generarPreguntaProvincia(clubs)
                                 } else {
-                                    preguntaActual = PreguntaGenerator.generarPreguntaDeporte(clubs)
                                     tipoPreguntaDeportes = 1
+                                    PreguntaGenerator.generarPreguntaDeporte(clubs)
                                 }
-
-
                             }
                             mostrarPregunta = true
                         }) {
@@ -239,8 +247,7 @@ fun GameScreen() {
                         }
                     }
                 }
-        } else {
-                // Mostrar pregunta
+            } else {
                 preguntaActual?.let { pregunta ->
                     Text(pregunta.texto, style = MaterialTheme.typography.titleMedium)
                     Spacer(modifier = Modifier.height(16.dp))
@@ -282,28 +289,52 @@ fun GameScreen() {
                 }
             }
 
-        }
-        if (mostrarResumen) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("🎉 ¡Partida terminada!", style = MaterialTheme.typography.headlineSmall)
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Puntos totales: $puntos")
-                Text("Respuestas correctas: $respuestasCorrectas de $selectedRounds")
-                Spacer(modifier = Modifier.height(24.dp))
-                Button(onClick = {
-                    // Resetear el juego
-                    puntos = 0
-                    respuestasCorrectas = 0
-                    racha = 0
-                    rondaActual = 1
-                    partidaIniciada = false
-                    mostrarResumen = false
-                    preguntaActual = null
-                }) {
-                    Text("Volver al inicio")
+            if (mostrarResumen) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("🎉 ¡Partida terminada!", style = MaterialTheme.typography.headlineSmall)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Puntos totales: $puntos")
+                    Text("Respuestas correctas: $respuestasCorrectas de $selectedRounds")
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(onClick = {
+                        puntos = 0
+                        respuestasCorrectas = 0
+                        racha = 0
+                        rondaActual = 1
+                        partidaIniciada = false
+                        mostrarResumen = false
+                        preguntaActual = null
+                    }) {
+                        Text("Volver al inicio")
+                    }
                 }
             }
         }
+    }
+}
 
+@Composable
+fun EstadisticasScreen(volverAlMenu: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("📊 Estadísticas", style = MaterialTheme.typography.headlineSmall)
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text("Mejor Puntuación: 12")
+        Text("Mejor Categoría: Política")
+        Text("Preguntas Acertadas: 23")
+        Text("Preguntas Falladas: 17")
+        Text("Rachas Conseguidas: 5")
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Button(onClick = volverAlMenu) {
+            Text("Volver al Menú")
+        }
     }
 }
