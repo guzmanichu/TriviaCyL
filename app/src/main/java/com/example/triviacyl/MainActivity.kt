@@ -134,7 +134,7 @@ fun GameScreen(
     var rondaActual by remember { mutableIntStateOf(1) }
     var racha by remember { mutableIntStateOf(0) }
     var mostrarResumen by remember { mutableStateOf(false) }
-    val categorias = listOf("Deportes")
+    val categorias = listOf("Deportes","Monuentos","Política","Tradiciones","Municipios")
     var categoriaSeleccionada by remember { mutableStateOf<String?>(null) }
     var mostrarPregunta by remember { mutableStateOf(false) }
     var categoriaAnimada by remember { mutableStateOf<String?>(null) }
@@ -167,129 +167,8 @@ fun GameScreen(
         Text("TriviaCyL", style = MaterialTheme.typography.headlineLarge)
         Spacer(modifier = Modifier.height(24.dp))
 
-        if (!partidaIniciada) {
-            Box {
-                Text(
-                    text = "Rondas: $selectedRounds",
-                    modifier = Modifier
-                        .clickable { isDropdownOpen = !isDropdownOpen }
-                        .padding(8.dp)
-                )
-                DropdownMenu(
-                    expanded = isDropdownOpen,
-                    onDismissRequest = { isDropdownOpen = false }
-                ) {
-                    listOf("5", "10", "15").forEach { round ->
-                        DropdownMenuItem(
-                            text = { Text(round) },
-                            onClick = {
-                                selectedRounds = round
-                                isDropdownOpen = false
-                            }
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(onClick = {
-                puntos = 0
-                rondaActual = 1
-                preguntaActual = PreguntaGenerator.generarPreguntaProvincia(clubs)
-                partidaIniciada = true
-            }) {
-                Text("Iniciar Partida")
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(onClick = onVerEstadisticas) {
-                Text("Estadísticas")
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Button(onClick = onCerrarSesion) {
-                Text("Cerrar Sesión")
-            }
-        } else {
-            Text("Ronda $rondaActual de $selectedRounds", style = MaterialTheme.typography.bodyLarge)
-            Text("Puntos: $puntos", style = MaterialTheme.typography.bodyLarge)
-            Text("Racha actual: $racha", style = MaterialTheme.typography.bodyLarge)
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            if (!mostrarPregunta) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("🎯 Ruleta de categoría", style = MaterialTheme.typography.titleMedium)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = categoriaAnimada ?: "...",
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    if (!ruletaEnProgreso) {
-                        Button(onClick = {
-                            if (categoriaSeleccionada == "Deportes") {
-                                preguntaActual = if (tipoPreguntaDeportes == 1) {
-                                    tipoPreguntaDeportes = 2
-                                    PreguntaGenerator.generarPreguntaProvincia(clubs)
-                                } else {
-                                    tipoPreguntaDeportes = 1
-                                    PreguntaGenerator.generarPreguntaDeporte(clubs)
-                                }
-                            }
-                            mostrarPregunta = true
-                        }) {
-                            Text("Continuar")
-                        }
-                    }
-                }
-            } else {
-                preguntaActual?.let { pregunta ->
-                    Text(pregunta.texto, style = MaterialTheme.typography.titleMedium)
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    pregunta.opciones.forEach { opcion ->
-                        Button(
-                            onClick = {
-                                if (opcion == pregunta.respuestaCorrecta) {
-                                    puntos++
-                                    racha++
-                                    respuestasCorrectas++
-                                    if (racha == 5) {
-                                        puntos += 5
-                                        Toast.makeText(context, "¡Racha de 5! +5 puntos extra", Toast.LENGTH_SHORT).show()
-                                        racha = 0
-                                    } else {
-                                        Toast.makeText(context, "¡Correcto!", Toast.LENGTH_SHORT).show()
-                                    }
-                                } else {
-                                    Toast.makeText(context, "Incorrecto", Toast.LENGTH_SHORT).show()
-                                    racha = 0
-                                }
-
-                                rondaActual++
-                                if (rondaActual > selectedRounds.toInt()) {
-                                    mostrarResumen = true
-                                    partidaIniciada = false
-                                } else {
-                                    mostrarPregunta = false
-                                }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                        ) {
-                            Text(opcion)
-                        }
-                    }
-                }
-            }
-
-            if (mostrarResumen) {
+        when {
+            mostrarResumen -> {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("🎉 ¡Partida terminada!", style = MaterialTheme.typography.headlineSmall)
                     Spacer(modifier = Modifier.height(16.dp))
@@ -301,16 +180,145 @@ fun GameScreen(
                         respuestasCorrectas = 0
                         racha = 0
                         rondaActual = 1
-                        partidaIniciada = false
                         mostrarResumen = false
+                        partidaIniciada = false
                         preguntaActual = null
+                        mostrarPregunta = false
                     }) {
                         Text("Volver al inicio")
                     }
                 }
             }
+
+            !partidaIniciada -> {
+                Box {
+                    Text(
+                        text = "Rondas: $selectedRounds",
+                        modifier = Modifier
+                            .clickable { isDropdownOpen = !isDropdownOpen }
+                            .padding(8.dp)
+                    )
+                    DropdownMenu(
+                        expanded = isDropdownOpen,
+                        onDismissRequest = { isDropdownOpen = false }
+                    ) {
+                        listOf("5", "10", "15").forEach { round ->
+                            DropdownMenuItem(
+                                text = { Text(round) },
+                                onClick = {
+                                    selectedRounds = round
+                                    isDropdownOpen = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(onClick = {
+                    puntos = 0
+                    rondaActual = 1
+                    preguntaActual = PreguntaGenerator.generarPreguntaProvincia(clubs)
+                    partidaIniciada = true
+                    mostrarResumen = false
+                    mostrarPregunta = false
+                }) {
+                    Text("Iniciar Partida")
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(onClick = onVerEstadisticas) {
+                    Text("Estadísticas")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(onClick = onCerrarSesion) {
+                    Text("Cerrar Sesión")
+                }
+            }
+
+            else -> {
+                Text("Ronda $rondaActual de $selectedRounds", style = MaterialTheme.typography.bodyLarge)
+                Text("Puntos: $puntos", style = MaterialTheme.typography.bodyLarge)
+                Text("Racha actual: $racha", style = MaterialTheme.typography.bodyLarge)
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (!mostrarPregunta) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("🎯 Ruleta de categoría", style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = categoriaAnimada ?: "...",
+                            style = MaterialTheme.typography.headlineSmall
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        if (!ruletaEnProgreso) {
+                            Button(onClick = {
+                                if (categoriaSeleccionada == "Deportes") {
+                                    preguntaActual = if (tipoPreguntaDeportes == 1) {
+                                        tipoPreguntaDeportes = 2
+                                        PreguntaGenerator.generarPreguntaProvincia(clubs)
+                                    } else {
+                                        tipoPreguntaDeportes = 1
+                                        PreguntaGenerator.generarPreguntaDeporte(clubs)
+                                    }
+                                }
+                                mostrarPregunta = true
+                            }) {
+                                Text("Continuar")
+                            }
+                        }
+                    }
+                } else {
+                    preguntaActual?.let { pregunta ->
+                        Text(pregunta.texto, style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        pregunta.opciones.forEach { opcion ->
+                            Button(
+                                onClick = {
+                                    if (opcion == pregunta.respuestaCorrecta) {
+                                        puntos++
+                                        racha++
+                                        respuestasCorrectas++
+                                        if (racha == 5) {
+                                            puntos += 5
+                                            Toast.makeText(context, "¡Racha de 5! +5 puntos extra", Toast.LENGTH_SHORT).show()
+                                            racha = 0
+                                        } else {
+                                            Toast.makeText(context, "¡Correcto!", Toast.LENGTH_SHORT).show()
+                                        }
+                                    } else {
+                                        Toast.makeText(context, "Incorrecto", Toast.LENGTH_SHORT).show()
+                                        racha = 0
+                                    }
+
+                                    rondaActual++
+                                    if (rondaActual > selectedRounds.toInt()) {
+                                        mostrarResumen = true
+                                        partidaIniciada = false
+                                    } else {
+                                        mostrarPregunta = false
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                            ) {
+                                Text(opcion)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
+
 }
 
 @Composable
